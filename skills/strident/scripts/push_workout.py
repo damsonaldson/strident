@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
 
 DEFAULT_TOKEN_PATH = Path.home() / ".garmin" / "oauth2_token.json"
+LOCAL_WORKSPACE_TOKEN_PATH = Path.cwd() / "tokens" / "oauth2_token.json"
 HTTP_TIMEOUT_SEC = 15
 
 VALID_STEP_TYPES = {"warmup", "cooldown", "interval", "recovery", "rest", "repeat"}
@@ -46,8 +47,14 @@ def parse_pace_to_mps(pace_str: str) -> float:
 
 
 def get_di_token(token_path_str: Optional[str] = None) -> str:
-    path = Path(token_path_str) if token_path_str else Path(os.getenv("GARMIN_TOKEN_FILE", str(DEFAULT_TOKEN_PATH)))
-    path = path.expanduser()
+    if token_path_str:
+        path = Path(token_path_str).expanduser()
+    elif os.getenv("GARMIN_TOKEN_FILE"):
+        path = Path(os.getenv("GARMIN_TOKEN_FILE", "")).expanduser()
+    elif LOCAL_WORKSPACE_TOKEN_PATH.exists():
+        path = LOCAL_WORKSPACE_TOKEN_PATH
+    else:
+        path = DEFAULT_TOKEN_PATH.expanduser()
     if not path.exists():
         print(f"Error: Garmin token file not found at {path}", file=sys.stderr)
         print("Please authenticate or export your Garmin OAuth token to ~/.garmin/oauth2_token.json", file=sys.stderr)

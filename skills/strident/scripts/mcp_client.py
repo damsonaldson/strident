@@ -231,6 +231,10 @@ class GarminMCPClient:
             "required_weekly_km": round(req_weekly_km, 2),
         }
 
+    def calc_2026_running_volume(self, target_annual: float = 1700.0) -> Dict[str, Any]:
+        """Backwards-compatible alias for calc_running_volume."""
+        return self.calc_running_volume(target_annual_km=target_annual, year=2026)
+
 
 def main():
     if len(sys.argv) < 2:
