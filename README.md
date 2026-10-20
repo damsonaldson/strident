@@ -87,8 +87,9 @@ Add the server to your `mcp_config.json`:
 ### 3. Initialize Your Profile
 When you first interact with Strident, it will prompt you to set up your local `user_profile.md` using the included templates:
 ```bash
-# Or generate your training zones instantly from the CLI:
+# Generate your training zones from a race benchmark or direct VDOT / LTHR:
 python3 skills/strident/scripts/calc_zones.py --max-hr 190 --resting-hr 48 --dist-km 10 --time "40:00"
+python3 skills/strident/scripts/calc_zones.py --lthr 168 --vdot 52.5
 ```
 
 ---
@@ -105,9 +106,9 @@ python3 skills/strident/scripts/calc_zones.py --max-hr 190 --resting-hr 48 --dis
 
 | Utility | Command | Description |
 | :--- | :--- | :--- |
-| **Garmin Query Client** | `python3 scripts/mcp_client.py vitals` | Reads HRV, sleep, today's metrics, and training load via MCP |
-| **Workout Dispatcher** | `python3 scripts/push_workout.py --name "6x1k" --reps 6 --pace-fast "4:05" --pace-slow "4:10"` | Pushes target workout to Garmin Connect calendar |
-| **Zone Calculator** | `python3 skills/strident/scripts/calc_zones.py --max-hr 185 --dist-km 5 --time "19:30"` | Calculates Karvonen HR zones & Jack Daniels pace targets |
+| **Garmin Query Client** | `python3 skills/strident/scripts/mcp_client.py vitals` | Reads HRV, sleep, today's metrics, and training load via MCP |
+| **Workout Dispatcher** | `python3 skills/strident/scripts/push_workout.py --name "6x1k" --reps 6 --pace-fast "4:05" --pace-slow "4:10" --schedule-today` | Validates & pushes target workout to Garmin Connect calendar |
+| **Zone Calculator** | `python3 skills/strident/scripts/calc_zones.py --lthr 168 --vdot 52.5` | Calculates Karvonen/Friel HR zones & Jack Daniels VDOT pace targets |
 
 ---
 

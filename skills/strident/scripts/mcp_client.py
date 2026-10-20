@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
-Standard MCP Client for AI Running Coach.
+Standard MCP Client for Strident Running Coach.
 Interfaces with a local or remote Garmin MCP server over Server-Sent Events (SSE).
 
-Default URL: Reads GARMIN_MCP_URL or defaults to http://localhost:8085
+Accepts GARMIN_MCP_URL as either a base URL (http://localhost:8085) or a full
+SSE endpoint URL (http://localhost:8085/sse) matching mcp_config.example.json.
 """
 
 import os
+import re
 import sys
 import json
 import time
@@ -16,15 +18,28 @@ import urllib.parse
 import datetime
 from typing import Any, Dict, Optional
 
-MCP_BASE_URL = os.getenv("GARMIN_MCP_URL", "http://localhost:8085").rstrip("/")
+DEFAULT_MCP_URL = os.getenv("GARMIN_MCP_URL", "http://localhost:8085/sse")
+
+
+def normalize_mcp_urls(raw_url: str) -> tuple[str, str, str]:
+    """
+    Normalizes either 'http://host:port' or 'http://host:port/sse' into:
+    (origin_base_url, sse_url, host_header)
+    """
+    cleaned = raw_url.strip().rstrip("/")
+    base_url = re.sub(r"/sse$", "", cleaned)
+    sse_url = f"{base_url}/sse"
+    parsed = urllib.parse.urlparse(base_url)
+    host_header = parsed.netloc or "localhost:8085"
+    return base_url, sse_url, host_header
+
 
 class GarminMCPClient:
-    def __init__(self, base_url: str = MCP_BASE_URL, timeout: int = 30):
-        self.base_url = base_url
-        parsed = urllib.parse.urlparse(self.base_url)
-        self.host_header = parsed.netloc or "localhost:8085"
+    def __init__(self, url: str = DEFAULT_MCP_URL, timeout: int = 30):
+        self.base_url, self.sse_url, self.host_header = normalize_mcp_urls(url)
         self.timeout = timeout
         self.endpoint_path: Optional[str] = None
+        self.post_url: Optional[str] = None
         self.ready_event = threading.Event()
         self.responses: Dict[int, Any] = {}
         self.msg_counter = 10
@@ -32,21 +47,39 @@ class GarminMCPClient:
         self._stop_listener = False
         self._connect()
 
-    def _connect(self):
+    def __enter__(self) -> "GarminMCPClient":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
+
+    def close(self) -> None:
+        self._stop_listener = True
+
+    def _connect(self) -> None:
         def listen():
-            req = urllib.request.Request(f"{self.base_url}/sse", headers={"Host": self.host_header})
+            req = urllib.request.Request(self.sse_url, headers={"Host": self.host_header, "Accept": "text/event-stream"})
+            current_event = "message"
             try:
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                     for raw_line in resp:
                         if self._stop_listener:
                             break
-                        line = raw_line.decode("utf-8").strip()
-                        if line.startswith("data: /messages/"):
-                            self.endpoint_path = line[6:].strip()
-                            self.ready_event.set()
-                        elif line.startswith("data: "):
+                        line = raw_line.decode("utf-8", errors="replace").strip()
+                        if not line:
+                            current_event = "message"
+                            continue
+                        if line.startswith("event:"):
+                            current_event = line[6:].strip()
+                        elif line.startswith("data:"):
+                            data_str = line[5:].strip()
+                            if current_event == "endpoint" or data_str.startswith("/messages") or data_str.startswith("http"):
+                                if not self.endpoint_path:
+                                    self.endpoint_path = data_str
+                                    self.ready_event.set()
+                                    continue
                             try:
-                                payload = json.loads(line[6:].strip())
+                                payload = json.loads(data_str)
                                 msg_id = payload.get("id")
                                 if msg_id is not None:
                                     self.responses[msg_id] = payload
@@ -58,49 +91,59 @@ class GarminMCPClient:
         self._listener_thread = threading.Thread(target=listen, daemon=True)
         self._listener_thread.start()
 
-        if not self.ready_event.wait(timeout=8) or not self.endpoint_path:
-            raise ConnectionError(f"Failed to connect to Garmin MCP Server at {self.base_url}/sse")
+        if not self.ready_event.wait(timeout=min(10, self.timeout)) or not self.endpoint_path:
+            raise ConnectionError(f"Failed to connect to Garmin MCP Server at {self.sse_url}")
 
-        self.post_url = f"{self.base_url}{self.endpoint_path}"
+        self.post_url = urllib.parse.urljoin(f"{self.base_url}/", self.endpoint_path.lstrip("/"))
         self._initialize()
 
-    def _send_rpc(self, msg_id: int, method: str, params: Optional[Dict[str, Any]] = None):
-        payload = {"jsonrpc": "2.0", "id": msg_id, "method": method}
+    def _send_rpc(self, msg_id: Optional[int], method: str, params: Optional[Dict[str, Any]] = None) -> None:
+        if not self.post_url:
+            raise ConnectionError("MCP session endpoint is not initialized.")
+        payload: Dict[str, Any] = {"jsonrpc": "2.0", "method": method}
+        if msg_id is not None:
+            payload["id"] = msg_id
         if params is not None:
             payload["params"] = params
         req = urllib.request.Request(
             self.post_url,
             data=json.dumps(payload).encode("utf-8"),
-            headers={"Host": self.host_header, "Content-Type": "application/json"}
+            headers={"Host": self.host_header, "Content-Type": "application/json"},
+            method="POST",
         )
-        urllib.request.urlopen(req, timeout=self.timeout)
+        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            resp.read()
 
-    def _initialize(self):
-        self._send_rpc(1, "initialize", {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {},
-            "clientInfo": {"name": "ai-running-coach-client", "version": "1.0"}
-        })
-        time.sleep(0.3)
-        notif_req = urllib.request.Request(
-            self.post_url,
-            data=json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}).encode("utf-8"),
-            headers={"Host": self.host_header, "Content-Type": "application/json"}
+    def _initialize(self) -> None:
+        self._send_rpc(
+            1,
+            "initialize",
+            {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "strident-mcp-client", "version": "1.0.0"},
+            },
         )
-        urllib.request.urlopen(notif_req, timeout=10)
-        time.sleep(0.2)
+        deadline = time.monotonic() + min(10.0, float(self.timeout))
+        while 1 not in self.responses and time.monotonic() < deadline:
+            time.sleep(0.05)
+
+        self._send_rpc(None, "notifications/initialized")
 
     def call_tool(self, tool_name: str, arguments: Optional[Dict[str, Any]] = None) -> Any:
         self.msg_counter += 1
         msg_id = self.msg_counter
         self._send_rpc(msg_id, "tools/call", {"name": tool_name, "arguments": arguments or {}})
 
-        for _ in range(200):
+        deadline = time.monotonic() + float(self.timeout)
+        while time.monotonic() < deadline:
             if msg_id in self.responses:
                 break
-            time.sleep(0.1)
+            time.sleep(0.05)
+        else:
+            raise TimeoutError(f"Timed out after {self.timeout}s waiting for MCP tool '{tool_name}'.")
 
-        resp = self.responses.get(msg_id, {})
+        resp = self.responses.pop(msg_id, {})
         if "error" in resp:
             raise RuntimeError(f"MCP Tool Error ({tool_name}): {resp['error']}")
 
@@ -131,7 +174,7 @@ class GarminMCPClient:
         return self.call_tool("garmin_training_load", {})
 
     def get_activities(self, start_date: str = "", end_date: str = "", activity_type: str = "", limit: int = 20) -> Any:
-        args = {"limit": limit}
+        args: Dict[str, Any] = {"limit": limit}
         if start_date:
             args["start_date"] = start_date
         if end_date:
@@ -149,7 +192,7 @@ class GarminMCPClient:
         start_date = f"{current_year}-01-01"
         activities = self.get_activities(start_date=start_date, limit=500)
         from collections import defaultdict
-        
+
         discipline_totals = defaultdict(lambda: {"count": 0, "km": 0.0, "hours": 0.0})
         total_running_km = 0.0
         total_running_count = 0
@@ -177,13 +220,17 @@ class GarminMCPClient:
             "year": current_year,
             "total_running_km": round(total_running_km, 2),
             "total_running_count": total_running_count,
-            "disciplines": {k: {"km": round(v["km"], 2), "count": v["count"], "hours": round(v["hours"], 1)} for k, v in discipline_totals.items()},
+            "disciplines": {
+                k: {"km": round(v["km"], 2), "count": v["count"], "hours": round(v["hours"], 1)}
+                for k, v in discipline_totals.items()
+            },
             "target_annual_km": target_annual_km,
             "remaining_km": round(remaining_km, 2),
             "days_remaining": days_remaining,
             "weeks_remaining": round(weeks_remaining, 2),
-            "required_weekly_km": round(req_weekly_km, 2)
+            "required_weekly_km": round(req_weekly_km, 2),
         }
+
 
 def main():
     if len(sys.argv) < 2:
@@ -191,36 +238,36 @@ def main():
         sys.exit(1)
 
     cmd = sys.argv[1].lower()
-    client = GarminMCPClient()
+    with GarminMCPClient() as client:
+        if cmd == "sync":
+            res = client.sync(refresh=True)
+            print(json.dumps(res, indent=2))
+        elif cmd == "today":
+            res = client.get_today()
+            print(json.dumps(res, indent=2))
+        elif cmd == "vitals":
+            vitals = {
+                "today": client.get_today(),
+                "hrv": client.get_hrv(),
+                "sleep": client.get_sleep(days=2),
+                "training_load": client.get_training_load(),
+            }
+            print(json.dumps(vitals, indent=2))
+        elif cmd == "volume":
+            target = float(sys.argv[2]) if len(sys.argv) > 2 else 1500.0
+            vol = client.calc_running_volume(target_annual_km=target)
+            print(json.dumps(vol, indent=2))
+        elif cmd == "last-run":
+            detail = client.get_activity_detail(last=True)
+            print(json.dumps(detail, indent=2))
+        elif cmd == "activities":
+            limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+            acts = client.get_activities(limit=limit)
+            print(json.dumps(acts, indent=2))
+        else:
+            print(f"Unknown command: {cmd}", file=sys.stderr)
+            sys.exit(1)
 
-    if cmd == "sync":
-        res = client.sync(refresh=True)
-        print(json.dumps(res, indent=2))
-    elif cmd == "today":
-        res = client.get_today()
-        print(json.dumps(res, indent=2))
-    elif cmd == "vitals":
-        vitals = {
-            "today": client.get_today(),
-            "hrv": client.get_hrv(),
-            "sleep": client.get_sleep(days=2),
-            "training_load": client.get_training_load()
-        }
-        print(json.dumps(vitals, indent=2))
-    elif cmd == "volume":
-        target = float(sys.argv[2]) if len(sys.argv) > 2 else 1500.0
-        vol = client.calc_running_volume(target_annual_km=target)
-        print(json.dumps(vol, indent=2))
-    elif cmd == "last-run":
-        detail = client.get_activity_detail(last=True)
-        print(json.dumps(detail, indent=2))
-    elif cmd == "activities":
-        limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
-        acts = client.get_activities(limit=limit)
-        print(json.dumps(acts, indent=2))
-    else:
-        print(f"Unknown command: {cmd}")
-        sys.exit(1)
 
 if __name__ == "__main__":
     main()

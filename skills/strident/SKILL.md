@@ -101,3 +101,4 @@ python3 ./scripts/mcp_client.py last-run
 * [Pacing Methodology & VDOT](./references/pacing_methodology.md)
 * [Biomechanical Safety & Tendinopathy Protocols](./references/injury_guardrails.md)
 * [Shoe Rotation & Heel-to-Toe Drop Strategy](./references/shoe_rotation.md)
+* [Garmin Connect Workout JSON Schema](./references/workout_schema.md)
