@@ -114,11 +114,11 @@ python3 skills/strident/scripts/calc_zones.py --lthr 168 --vdot 52.5
 
 ## 📚 Sports Science Principles
 
-Strident operates under strict biomechanical and physiological rules:
-* **The First Rep Brake:** Rep 1 of an interval set must start at the slowest pace boundary to prevent premature lactate flooding. Negative splitting is enforced.
-* **Active Aerobic Recovery:** Continuous jogging between intervals to accelerate lactate clearance and prevent recovery creep.
-* **Tendon Stiffness Gating:** Morning stiffness $\ge 4/10$ automatically converts quality intervals into Zone 1/2 recovery.
-* **Heel-to-Toe Drop Strategy:** High-drop trainers ($\ge 8\text{ mm}$) mandated for recovery volume to offload the Achilles tendon.
+Strident operates as a **Lead Exercise Physiologist & Performance Strategist** grounded in peer-reviewed endurance science (Daniels VDOT, Seiler polarized distribution, Bakken sub-threshold control, Cook & Purdam tendon continuum):
+* **Sub-Threshold (`LT2`) vs. Critical Velocity (`CV`) Separation:** Clearly distinguishes 60-minute Lactate Threshold (`Zone 4a LT2`, paired with **45–60s passive/walking rest** to drop HR and offload the Achilles) from 40-minute 10K Race Pace (`Zone 4b CV`, paired with **90–120s easy walk/jog rest**).
+* **The First Rep Brake & Grade-Adjusted Intelligence:** Rep 1 of an interval set must start at the slow boundary of the target zone to prevent premature glycolytic acidosis. Uphill splits are evaluated by internal load (HR/Power) rather than raw pace.
+* **3-Tier Readiness Gating (Green / Amber / Red):** Evaluates 7-day rolling HRV trend, RHR delta, ACWR, and morning tendon stiffness (`0–10`)—applying **Minimum Effective Dose (MED)** scaling levers on Amber days (`3/10` stiffness or single-night poor sleep) and full recovery pivots on Red days ($\ge 4/10$).
+* **Velocity-Normalized Biomechanics & Tendon Remodeling:** Evaluates cadence, Ground Contact Time (`GCT`), and Vertical Ratio (`VR`) relative to running speed, paired with high-drop ($\ge 8.5\text{ mm}$) base trainers and daily analgesic neutral isometric holds.
 
 ---
 

@@ -13,13 +13,14 @@
 ## 2. Calculated Heart Rate & Pace Zones
 *(Calibrated via `scripts/calc_zones.py` or Jack Daniels VDOT)*
 
-| Zone | Name | % HRmax | Target Pace (/km) | Primary Adaptation |
+| Zone | Name | % HRmax | Target Pace (/km) | Primary Adaptation & Recovery |
 | :--- | :--- | :--- | :--- | :--- |
-| **Zone 1** | Active Recovery | < 68% | > <Z1_PACE> | Glycogen replenishment, active flush |
-| **Zone 2** | Aerobic Base / Easy | 68–78% | <Z2_SLOW> – <Z2_FAST> | Mitochondrial density, fat oxidation |
-| **Zone 3** | Steady / Marathon Pace | 79–87% | <Z3_SLOW> – <Z3_FAST> | Glycogen economy, sustained aerobic power |
-| **Zone 4** | Threshold / Tempo (LT2) | 88–92% | <Z4_SLOW> – <Z4_FAST> | Lactate clearance capacity |
-| **Zone 5** | Interval / VO2 Max | 93–98% | <Z5_SLOW> – <Z5_FAST> | Maximum oxygen uptake, stroke volume |
+| **Zone 1** | Active Recovery (`Rec`) | < 68% | > <Z1_PACE> | Glycogen replenishment, capillary flush |
+| **Zone 2** | Aerobic Base / Easy (`E`) | 68–78% | <Z2_SLOW> – <Z2_FAST> | Mitochondrial density, fat oxidation |
+| **Zone 3** | Steady / Marathon Pace (`S`) | 79–85% | <Z3_SLOW> – <Z3_FAST> | Glycogen economy, sustained aerobic power |
+| **Zone 4a** | Sub-Threshold / LT2 (`T`) | 86–90% | <Z4A_SLOW> – <Z4A_FAST> | MLSS lactate shuttle (45–60s walk/stand rest) |
+| **Zone 4b** | Critical Velocity / 10K (`CV`) | 90–94% | <Z4B_SLOW> – <Z4B_FAST> | 10K pace durability, H+ buffering (90–120s rest) |
+| **Zone 5** | Interval / VO2 Max (`I`) | 95–100% | <Z5_SLOW> – <Z5_FAST> | Maximal oxygen uptake, stroke volume (2:00+ jog rest) |
 
 ---
 

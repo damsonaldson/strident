@@ -75,7 +75,7 @@ def vdot_intensity_to_sec_per_km(vdot: float, pct_vdot: float) -> float:
 
 
 def calculate_pace_zones_from_vdot(vdot: float) -> Dict[str, str]:
-    """Calculates Jack Daniels training pace zones from a VDOT score."""
+    """Calculates Jack Daniels & Bakken-aligned training pace zones from a VDOT score."""
     if vdot <= 15 or vdot > 95:
         raise ValueError(f"VDOT {vdot} is outside physiological bounds (15–95).")
 
@@ -84,9 +84,11 @@ def calculate_pace_zones_from_vdot(vdot: float) -> Dict[str, str]:
     z2_fast = vdot_intensity_to_sec_per_km(vdot, 0.74)
     z3_slow = vdot_intensity_to_sec_per_km(vdot, 0.78)
     z3_fast = vdot_intensity_to_sec_per_km(vdot, 0.83)
-    z4_slow = vdot_intensity_to_sec_per_km(vdot, 0.86)
-    z4_fast = vdot_intensity_to_sec_per_km(vdot, 0.89)
-    z5_slow = vdot_intensity_to_sec_per_km(vdot, 0.95)
+    z4a_slow = vdot_intensity_to_sec_per_km(vdot, 0.86)
+    z4a_fast = vdot_intensity_to_sec_per_km(vdot, 0.89)
+    z4b_slow = vdot_intensity_to_sec_per_km(vdot, 0.91)
+    z4b_fast = vdot_intensity_to_sec_per_km(vdot, 0.94)
+    z5_slow = vdot_intensity_to_sec_per_km(vdot, 0.96)
     z5_fast = vdot_intensity_to_sec_per_km(vdot, 1.00)
     rep_slow = vdot_intensity_to_sec_per_km(vdot, 1.05)
     rep_fast = vdot_intensity_to_sec_per_km(vdot, 1.10)
@@ -95,9 +97,10 @@ def calculate_pace_zones_from_vdot(vdot: float) -> Dict[str, str]:
         "Zone 1 (Recovery / E-)": f"> {format_pace(z1_slow)} /km",
         "Zone 2 (Easy / Aerobic E)": f"{format_pace(z2_slow)} – {format_pace(z2_fast)} /km",
         "Zone 3 (Steady / Marathon M)": f"{format_pace(z3_slow)} – {format_pace(z3_fast)} /km",
-        "Zone 4 (Threshold / LT2 T)": f"{format_pace(z4_slow)} – {format_pace(z4_fast)} /km",
-        "Zone 5 (VO2 Max / Interval I)": f"{format_pace(z5_slow)} – {format_pace(z5_fast)} /km",
-        "Zone 6 (Anaerobic Repetition R)": f"{format_pace(rep_slow)} – {format_pace(rep_fast)} /km",
+        "Zone 4a (Sub-Threshold / LT2 T)": f"{format_pace(z4a_slow)} – {format_pace(z4a_fast)} /km (45-60s walk/stand rest)",
+        "Zone 4b (Critical Velocity / 10K CV)": f"{format_pace(z4b_slow)} – {format_pace(z4b_fast)} /km (90-120s easy walk/jog rest)",
+        "Zone 5 (VO2 Max / Interval I)": f"{format_pace(z5_slow)} – {format_pace(z5_fast)} /km (2:00-2:30 jog rest)",
+        "Zone 6 (Anaerobic Repetition R)": f"{format_pace(rep_slow)} – {format_pace(rep_fast)} /km (full recovery)",
     }
 
 
