@@ -1,0 +1,7 @@
+{
+  "name": "strident",
+  "version": "1.0.0",
+  "description": "An autonomous, feedback-driven running coach that ingests Garmin data, generates adaptive workouts, and pushes scheduled sessions back via Garmin Connect.",
+  "author": "AI Coach",
+  "license": "MIT"
+}

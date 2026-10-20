@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "garmin": {
+      "url": "http://localhost:8085/sse"
+    }
+  }
+}
